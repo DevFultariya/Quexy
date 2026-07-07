@@ -22,53 +22,59 @@ class ConnectionManager:
     def __init__(self):
         self.connector: DataSourceConnector | None = None
         self.schema_cache: dict[str, Any] = {}
+        self.active_datasource_id: str | None = None
     
     @property
     def is_connected(self) -> bool:
         return self.connector is not None and self.connector.is_connected
     
-    def connect_csv(self, file_path: str, table_name: str | None = None) -> dict:
+    def connect_csv(self, file_path: str, table_name: str | None = None, datasource_id: str | None = None) -> dict:
         """Connect a CSV file."""
         self._disconnect_existing()
         connector = CSVConnector()
         connector.connect(file_path=file_path, table_name=table_name)
         self.connector = connector
+        self.active_datasource_id = datasource_id
         self._cache_schema()
         return self.get_status()
     
-    def connect_excel(self, file_path: str) -> dict:
+    def connect_excel(self, file_path: str, datasource_id: str | None = None) -> dict:
         """Connect an Excel file."""
         self._disconnect_existing()
         connector = ExcelConnector()
         connector.connect(file_path=file_path)
         self.connector = connector
+        self.active_datasource_id = datasource_id
         self._cache_schema()
         return self.get_status()
     
-    def connect_sqlite(self, file_path: str) -> dict:
+    def connect_sqlite(self, file_path: str, datasource_id: str | None = None) -> dict:
         """Connect a SQLite database file."""
         self._disconnect_existing()
         connector = SQLiteConnector()
         connector.connect(file_path=file_path)
         self.connector = connector
+        self.active_datasource_id = datasource_id
         self._cache_schema()
         return self.get_status()
     
-    def connect_postgresql(self, host: str, port: int, database: str, username: str, password: str) -> dict:
+    def connect_postgresql(self, host: str, port: int, database: str, username: str, password: str, datasource_id: str | None = None) -> dict:
         """Connect to a PostgreSQL database."""
         self._disconnect_existing()
         connector = PostgreSQLConnector()
         connector.connect(host=host, port=port, database=database, username=username, password=password)
         self.connector = connector
+        self.active_datasource_id = datasource_id
         self._cache_schema()
         return self.get_status()
     
-    def connect_mysql(self, host: str, port: int, database: str, username: str, password: str) -> dict:
+    def connect_mysql(self, host: str, port: int, database: str, username: str, password: str, datasource_id: str | None = None) -> dict:
         """Connect to a MySQL database."""
         self._disconnect_existing()
         connector = MySQLConnector()
         connector.connect(host=host, port=port, database=database, username=username, password=password)
         self.connector = connector
+        self.active_datasource_id = datasource_id
         self._cache_schema()
         return self.get_status()
     
@@ -145,6 +151,7 @@ class ConnectionManager:
             self.connector.disconnect()
         self.connector = None
         self.schema_cache = {}
+        self.active_datasource_id = None
     
     def _cache_schema(self) -> None:
         """Cache the schema of all tables for AI context."""

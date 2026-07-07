@@ -1,12 +1,16 @@
 """
 Quexy — Query API Routes
-Endpoints for submitting natural language queries and retrieving history.
+Endpoints for submitting queries, listing history, and hydrating past analyses.
+Integrates user session checks to isolate query outcomes per connection.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from typing import Optional
 
 from ai.pipeline import ai_pipeline
 from connectors.manager import connection_manager
+from routes.auth import get_current_user
+from database import get_user_history, get_query_log_by_id, get_datasource_by_id
 
 router = APIRouter()
 
@@ -17,15 +21,13 @@ class QueryRequest(BaseModel):
 
 
 @router.post("")
-async def submit_query(request: QueryRequest):
+async def submit_query(
+    request: QueryRequest,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Submit a natural language question and receive an adaptive response.
-    
-    The AI pipeline will:
-    1. Understand your intent
-    2. Generate the appropriate SQL query
-    3. Execute it securely
-    4. Compose an intelligent response with KPIs, charts, tables, and insights
+    Saves the execution history in the query log vault.
     """
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
@@ -36,7 +38,11 @@ async def submit_query(request: QueryRequest):
             detail="No data source connected. Please connect a database or upload a file first.",
         )
     
-    response = await ai_pipeline.process_question(request.question.strip())
+    # Process query passing active user_id for logging
+    response = await ai_pipeline.process_question(
+        request.question.strip(), 
+        user_id=current_user["user_id"]
+    )
     
     return {
         "success": response.success,
@@ -45,24 +51,126 @@ async def submit_query(request: QueryRequest):
 
 
 @router.get("/history")
-async def get_query_history():
-    """Get the query history for the current session."""
-    history = ai_pipeline.get_history()
+async def get_query_history(current_user: dict = Depends(get_current_user)):
+    """Get the query history for the active user account and database connection."""
+    datasource_id = connection_manager.active_datasource_id
+    if not datasource_id:
+        return {
+            "success": True,
+            "data": [],
+        }
+        
+    history = get_user_history(current_user["user_id"], datasource_id)
+    
+    # Map logs to frontend history item format
+    formatted = []
+    for item in history:
+        q_lower = item["question"].lower()
+        formatted.append({
+            "query_id": item["query_id"],
+            "question": item["question"],
+            "summary": item["summary"],
+            "timestamp": item["timestamp"],
+            "has_kpis": True,
+            "has_charts": any(x in q_lower for x in ("trend", "sales", "compare", "chart", "growth", "revenue")),
+            "has_tables": True,
+            "has_insights": True
+        })
+        
     return {
         "success": True,
-        "data": [h.model_dump() for h in history],
+        "data": formatted,
     }
 
 
 @router.get("/{query_id}")
-async def get_query_response(query_id: str):
-    """Get a specific past query response by ID."""
-    response = ai_pipeline.get_query_by_id(query_id)
-    
-    if not response:
-        raise HTTPException(status_code=404, detail="Query not found.")
-    
-    return {
-        "success": True,
-        "data": response,
-    }
+async def get_query_response(
+    query_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get a specific past query response by re-executing it (hydration).
+    Ensures fresh data calculations with zero database caching bloat.
+    """
+    log = get_query_log_by_id(query_id)
+    if not log or log["user_id"] != current_user["user_id"]:
+        raise HTTPException(
+            status_code=404, 
+            detail="Query record not found or access denied."
+        )
+        
+    # Auto-connect connection profile if disconnected or switched
+    if not connection_manager.is_connected or connection_manager.active_datasource_id != log["datasource_id"]:
+        profile = get_datasource_by_id(log["datasource_id"])
+        if not profile or profile["user_id"] != current_user["user_id"]:
+            raise HTTPException(
+                status_code=400,
+                detail="The database profile for this query was not found or is restricted."
+            )
+        try:
+            t = profile["type"]
+            cfg = profile["config"]
+            name = profile["name"]
+            ds_id = log["datasource_id"]
+            
+            if t == "csv":
+                connection_manager.connect_csv(cfg["file_path"], name, datasource_id=ds_id)
+            elif t == "excel":
+                connection_manager.connect_excel(cfg["file_path"], datasource_id=ds_id)
+            elif t == "sqlite":
+                connection_manager.connect_sqlite(cfg["file_path"], datasource_id=ds_id)
+            elif t == "postgresql":
+                connection_manager.connect_postgresql(
+                    host=cfg["host"],
+                    port=cfg["port"],
+                    database=cfg["database"],
+                    username=cfg["username"],
+                    password=cfg["password"],
+                    datasource_id=ds_id
+                )
+            elif t == "mysql":
+                connection_manager.connect_mysql(
+                    host=cfg["host"],
+                    port=cfg["port"],
+                    database=cfg["database"],
+                    username=cfg["username"],
+                    password=cfg["password"],
+                    datasource_id=ds_id
+                )
+            else:
+                raise Exception(f"Unsupported connection type: {t}")
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to auto-connect database for history item: {str(e)}"
+            )
+        
+    try:
+        # Re-execute the query directly against the active connection
+        data = connection_manager.execute_query(log["sql_query"])
+        
+        # Re-classify intent & recompose output layouts
+        intent = await ai_pipeline._classify_intent(log["question"])
+        response_data = await ai_pipeline._compose_response(log["question"], data, intent)
+        
+        return {
+            "success": True,
+            "data": {
+                "query_id": query_id,
+                "question": log["question"],
+                "summary": response_data.get("summary", ""),
+                "kpi_cards": response_data.get("kpi_cards", []),
+                "charts": response_data.get("charts", []),
+                "tables": response_data.get("tables", []),
+                "insights": response_data.get("insights", []),
+                "recommendations": response_data.get("recommendations", []),
+                "success": True,
+                "timestamp": log["timestamp"],
+                "execution_time_ms": 0
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to hydrate query history item: {str(e)}"
+        )

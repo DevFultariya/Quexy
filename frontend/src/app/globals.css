@@ -226,6 +226,10 @@ a:hover {
   overflow: hidden;
 }
 
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed);
+}
+
 .sidebar-header {
   padding: var(--space-6);
   border-bottom: var(--glass-border);

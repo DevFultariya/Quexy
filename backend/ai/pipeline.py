@@ -39,14 +39,15 @@ class AIPipeline:
     """
     
     def __init__(self):
-        self.query_history: list[dict] = []
+        pass
     
-    async def process_question(self, question: str) -> QueryResponse:
+    async def process_question(self, question: str, user_id: Optional[str] = None) -> QueryResponse:
         """
         Process a natural language question and return a complete response.
         
         Args:
             question: The user's natural language question
+            user_id: Optional authenticated user ID for logging query logs
             
         Returns:
             QueryResponse with dynamically composed components
@@ -156,8 +157,16 @@ class AIPipeline:
             )
             
             # Store in history
-            self._add_to_history(response)
-            
+            if user_id and connection_manager.active_datasource_id:
+                from database import save_query_log
+                save_query_log(
+                    user_id=user_id,
+                    datasource_id=connection_manager.active_datasource_id,
+                    question=question,
+                    sql_query=executed_sql,
+                    summary=response.summary
+                )
+                
             return response
         
         except Exception as e:
@@ -328,42 +337,7 @@ Generate ONLY the corrected SQL query. No explanations."""
             # Fallback to heuristic composer
             return response_composer.compose(question, data, intent)
     
-    def _add_to_history(self, response: QueryResponse) -> None:
-        """Add a query response to the session history."""
-        self.query_history.append({
-            "query_id": response.query_id,
-            "question": response.question,
-            "summary": response.summary,
-            "timestamp": response.timestamp,
-            "has_kpis": len(response.kpi_cards) > 0,
-            "has_charts": len(response.charts) > 0,
-            "has_tables": len(response.tables) > 0,
-            "has_insights": len(response.insights) > 0,
-            "response": response.model_dump(),
-        })
-    
-    def get_history(self) -> list[QueryHistoryItem]:
-        """Get query history for the current session."""
-        return [
-            QueryHistoryItem(
-                query_id=h["query_id"],
-                question=h["question"],
-                summary=h["summary"],
-                timestamp=h["timestamp"],
-                has_kpis=h["has_kpis"],
-                has_charts=h["has_charts"],
-                has_tables=h["has_tables"],
-                has_insights=h["has_insights"],
-            )
-            for h in reversed(self.query_history)
-        ]
-    
-    def get_query_by_id(self, query_id: str) -> dict | None:
-        """Get a specific past query response by ID."""
-        for h in self.query_history:
-            if h["query_id"] == query_id:
-                return h["response"]
-        return None
+
 
 
 # Singleton instance

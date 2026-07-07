@@ -1,6 +1,6 @@
 /* =============================================
    Quexy — API Client
-   Centralized API communication layer
+   Centralized API communication layer with Auth
    ============================================= */
 
 import type {
@@ -21,17 +21,59 @@ class APIError extends Error {
   }
 }
 
+// Token helper getters/setters
+export function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('quexy_token');
+}
+
+export function setToken(token: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('quexy_token', token);
+  }
+}
+
+export function removeToken() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('quexy_token');
+  }
+}
+
+export function getUsername(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('quexy_username');
+}
+
+export function setUsername(name: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('quexy_username', name);
+  }
+}
+
+export function removeUsername() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('quexy_username');
+  }
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  const token = getToken();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   });
 
@@ -47,15 +89,42 @@ async function request<T>(
   return data;
 }
 
-// --- Data Source ---
+// --- User Authentication ---
+
+export async function registerUser(config: Record<string, string>): Promise<APIResponse<{ token: string; username: string }>> {
+  return request<APIResponse<{ token: string; username: string }>>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
+}
+
+export async function loginUser(config: Record<string, string>): Promise<APIResponse<{ token: string; username: string }>> {
+  return request<APIResponse<{ token: string; username: string }>>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
+}
+
+export async function getMe(): Promise<APIResponse<{ id: string; username: string; email: string }>> {
+  return request<APIResponse<{ id: string; username: string; email: string }>>('/auth/me');
+}
+
+// --- Data Source Ingestion & Profiles ---
 
 export async function uploadFile(file: File): Promise<APIResponse<ConnectionStatus>> {
   const formData = new FormData();
   formData.append('file', file);
 
   const url = `${API_BASE}/datasource/upload`;
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
+    headers,
     body: formData,
   });
 
@@ -66,17 +135,26 @@ export async function uploadFile(file: File): Promise<APIResponse<ConnectionStat
   return data;
 }
 
-export async function connectDatabase(config: {
-  db_type: string;
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
-}): Promise<APIResponse<ConnectionStatus>> {
+export async function connectDatabase(config: Record<string, any>): Promise<APIResponse<ConnectionStatus>> {
   return request<APIResponse<ConnectionStatus>>('/datasource/connect', {
     method: 'POST',
     body: JSON.stringify(config),
+  });
+}
+
+export async function getSavedConnections(): Promise<APIResponse<any[]>> {
+  return request<APIResponse<any[]>>('/datasource/saved');
+}
+
+export async function activateConnection(id: string): Promise<APIResponse<ConnectionStatus>> {
+  return request<APIResponse<ConnectionStatus>>(`/datasource/${id}/activate`, {
+    method: 'POST',
+  });
+}
+
+export async function deleteConnection(id: string): Promise<APIResponse<any>> {
+  return request<APIResponse<any>>(`/datasource/${id}`, {
+    method: 'DELETE',
   });
 }
 
@@ -94,7 +172,7 @@ export async function disconnectDataSource(): Promise<APIResponse<any>> {
   });
 }
 
-// --- Query ---
+// --- Query Routing ---
 
 export async function submitQuery(
   question: string

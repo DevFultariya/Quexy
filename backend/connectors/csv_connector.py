@@ -47,7 +47,13 @@ class CSVConnector(DataSourceConnector):
             
             # Determine table name from filename
             if table_name:
-                self.table_name = table_name.strip().replace(" ", "_").lower()
+                base_name, _ = os.path.splitext(table_name)
+                self.table_name = (
+                    base_name.strip()
+                    .replace(" ", "_")
+                    .replace("-", "_")
+                    .lower()
+                )
             else:
                 self.table_name = (
                     os.path.splitext(os.path.basename(file_path))[0]

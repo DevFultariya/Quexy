@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 import traceback
 
 from config import settings
-from routes import datasource, query, health
+from routes import auth, datasource, query, health
 
 
 # --- Application ---
@@ -49,7 +49,15 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+# --- Startup Event ---
+@app.on_event("startup")
+async def startup_event():
+    from database import init_system_db
+    init_system_db()
+
+
 # --- Register Routers ---
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(datasource.router, prefix="/api/datasource", tags=["Data Source"])
 app.include_router(query.router, prefix="/api/query", tags=["Query"])
