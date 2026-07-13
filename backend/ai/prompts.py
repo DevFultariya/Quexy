@@ -92,6 +92,8 @@ GUIDELINES FOR RESPONSE COMPOSITION:
 10. Chart data must be an array of objects with consistent keys
 11. Limit pie charts to max 8 slices (group rest as "Other")
 12. For tables, limit to max 50 rows (paginate larger sets)
+13. Recommendations must be business-focused, actionable, and helpful (e.g., "Adjust inventory margins to match high-demand quarters", "Optimize logistics for underperforming regions").
+14. NEVER output technical database or backend collection tasks (e.g., "Investigate the data source", "Check for anomalies or collection issues", "Examine database tables", "Check if this is test data"). Write recommendations from the perspective of an executive business consultant offering strategies to increase profitability or operations.
 
 IMPORTANT: Return ONLY valid JSON. No markdown, no code blocks, no explanations.
 

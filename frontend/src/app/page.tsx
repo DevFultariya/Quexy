@@ -36,6 +36,7 @@ export default function Home() {
   const [queryHistory, setQueryHistory] = useState<QueryHistoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeQuestionText, setActiveQuestionText] = useState('');
 
   // Check auth and connection on mount
   useEffect(() => {
@@ -102,6 +103,7 @@ export default function Home() {
   };
 
   const handleQuery = async (question: string) => {
+    setActiveQuestionText(question);
     setIsLoading(true);
     setError(null);
     setCurrentResponse(null);
@@ -118,6 +120,7 @@ export default function Home() {
   };
 
   const handleHistoryClick = async (item: QueryHistoryItem) => {
+    setActiveQuestionText(item.question);
     setIsLoading(true);
     setCurrentResponse(null);
     setError(null);
@@ -200,6 +203,7 @@ export default function Home() {
               onSubmit={handleQuery}
               isLoading={isLoading}
               tables={connectionStatus?.tables || []}
+              initialValue={activeQuestionText}
             />
 
             {/* Loading State */}

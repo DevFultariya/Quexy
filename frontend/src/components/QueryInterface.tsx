@@ -8,6 +8,7 @@ interface Props {
   onSubmit: (question: string) => void;
   isLoading: boolean;
   tables: TableInfo[];
+  initialValue?: string;
 }
 
 const SUGGESTIONS = [
@@ -21,10 +22,17 @@ const SUGGESTIONS = [
   'Revenue distribution by state',
 ];
 
-export default function QueryInterface({ onSubmit, isLoading, tables }: Props) {
+export default function QueryInterface({ onSubmit, isLoading, tables, initialValue }: Props) {
   const [question, setQuestion] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync with initialValue (e.g. from query history click)
+  useEffect(() => {
+    if (initialValue !== undefined) {
+      setQuestion(initialValue);
+    }
+  }, [initialValue]);
 
   // Rotate placeholder suggestions
   useEffect(() => {

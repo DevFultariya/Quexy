@@ -5,6 +5,7 @@ and programmatically corrects typos in table/column names without hitting the LL
 """
 import logging
 import difflib
+import re
 from typing import Any, Optional, Tuple
 
 import sqlglot
@@ -43,12 +44,55 @@ class ASTCorrector:
             Tuple of (corrected_sql_string, was_corrected_bool)
         """
         try:
+            # Pre-process raw SQL to strip legacy single/double quotes around tables and columns.
+            # E.g. 'i'.'quantity' -> i.quantity, or 'products'.'name' -> products.name
+            
+            # 1. Matches quoted_alias.quoted_col (e.g. 'i'.'quantity' or "i"."quantity") -> i.quantity
+            sql_clean = re.sub(r"['\"]([a-zA-Z0-9_]+)['\"]\s*\.\s*['\"]([a-zA-Z0-9_]+)['\"]", r'\1.\2', sql)
+            
+            # 2. Matches unquoted_alias.quoted_col (e.g. i.'quantity' or i."quantity") -> i.quantity
+            sql_clean = re.sub(r"\b([a-zA-Z0-9_]+)\s*\.\s*['\"]([a-zA-Z0-9_]+)['\"]", r'\1.\2', sql_clean)
+            
+            # 3. Matches quoted_table.unquoted_col (e.g. 'i'.quantity or "i".quantity) -> i.quantity
+            sql_clean = re.sub(r"['\"]([a-zA-Z0-9_]+)['\"]\s*\.\s*\b([a-zA-Z0-9_]+)\b", r'\1.\2', sql_clean)
+
+            # 4. Clean single/double quotes inside common aggregation functions
+            # E.g. SUM('quantity') -> SUM(quantity)
+            sql_clean = re.sub(
+                r"\b(SUM|AVG|COUNT|MAX|MIN|ROUND)\s*\(\s*['\"]([a-zA-Z0-9_]+)['\"]\s*\)", 
+                r'\1(\2)', 
+                sql_clean, 
+                flags=re.IGNORECASE
+            )
+            
+            # 5. Clean table aliases in JOINs/FROMs: e.g. FROM 'inventory' AS 'i' -> FROM inventory AS i
+            sql_clean = re.sub(
+                r"\b(FROM|JOIN)\s+['\"]([a-zA-Z0-9_]+)['\"]\s+(AS\s+)?['\"]([a-zA-Z0-9_]+)['\"]",
+                r'\1 \2 AS \4',
+                sql_clean,
+                flags=re.IGNORECASE
+            )
+            
+            # 6. Clean quoted table names without aliases: e.g. FROM 'inventory' -> FROM inventory
+            sql_clean = re.sub(
+                r"\b(FROM|JOIN)\s+['\"]([a-zA-Z0-9_]+)['\"]",
+                r'\1 \2',
+                sql_clean,
+                flags=re.IGNORECASE
+            )
+            
             # Parse SQL to AST
             # (fallback to base dialect if current dialect parsing throws exception)
             try:
-                expression = sqlglot.parse_one(sql, read=dialect if dialect != "postgres" else "postgres")
+                # 1. Try parsing with target database dialect (handles backticks)
+                expression = sqlglot.parse_one(sql_clean, read=dialect if dialect != "postgres" else "postgres")
             except Exception:
-                expression = sqlglot.parse_one(sql)
+                try:
+                    # 2. Try parsing with postgres reader (handles double quotes)
+                    expression = sqlglot.parse_one(sql_clean, read="postgres")
+                except Exception:
+                    # 3. Fallback to default parser
+                    expression = sqlglot.parse_one(sql_clean)
 
             if not expression:
                 return sql, False

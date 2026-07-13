@@ -408,15 +408,17 @@ export default function Sidebar({
                         {table.name}
                       </span>
                     </div>
-                    <span style={{
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      color: 'rgba(255, 255, 255, 0.15)',
-                      flexShrink: 0,
-                      marginLeft: '8px',
-                    }}>
-                      {table.rows}
-                    </span>
+                    {table.rows !== undefined && table.rows !== null && table.rows !== 'unknown' && table.rows !== -1 && (
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        color: 'rgba(255, 255, 255, 0.15)',
+                        flexShrink: 0,
+                        marginLeft: '8px',
+                      }}>
+                        {table.rows}
+                      </span>
+                    )}
                   </>
                 ) : (
                   <Table size={14} style={{ color: 'rgba(255, 255, 255, 0.2)' }} title={table.name} />
@@ -474,26 +476,6 @@ export default function Sidebar({
                     <Clock size={9} />
                     {formatTimestamp(item.timestamp)}
                   </span>
-                  {item.has_charts && (
-                    <span style={{
-                      padding: '1px 5px',
-                      borderRadius: '4px',
-                      background: 'rgba(96, 165, 250, 0.1)',
-                      color: '#60A5FA',
-                      fontSize: '9px',
-                      fontWeight: 600,
-                    }}>Chart</span>
-                  )}
-                  {item.has_kpis && (
-                    <span style={{
-                      padding: '1px 5px',
-                      borderRadius: '4px',
-                      background: 'rgba(167, 139, 250, 0.1)',
-                      color: '#A78BFA',
-                      fontSize: '9px',
-                      fontWeight: 600,
-                    }}>KPI</span>
-                  )}
                 </div>
               </div>
             ))}

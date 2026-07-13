@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { 
   Database, Sparkles, Shield, Zap, BarChart3, 
-  Brain, Lock, ArrowRight, ChevronRight, Layers,
-  GitBranch, Terminal
+  Brain, Lock, ArrowRight, ChevronRight, Layers
 } from 'lucide-react';
 import QuexyLogo from './QuexyLogo';
 
@@ -19,61 +18,59 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
   const features = [
     {
       icon: <Brain size={22} />,
-      title: 'Natural Language Queries',
-      description: 'Ask questions in plain English. Our AI translates your intent into optimized SQL and returns visual analytics instantly.',
+      title: 'Plain-English Questions',
+      description: 'Ask questions in normal language. Our system understands what you want, runs the query behind the scenes, and returns clear visual answers.',
       color: '#A78BFA',
       bgColor: 'rgba(167, 139, 250, 0.08)',
       borderColor: 'rgba(167, 139, 250, 0.15)',
     },
     {
-      icon: <GitBranch size={22} />,
-      title: 'AST Schema Healing',
-      description: 'A built-in compiler walks the SQL abstract syntax tree and programmatically corrects column hallucinations before execution.',
+      icon: <Sparkles size={22} />,
+      title: 'Smart Auto-Correction',
+      description: 'Never worry about formatting. The built-in query agent automatically detects and corrects data search issues to ensure your reports load smoothly.',
       color: '#34D399',
       bgColor: 'rgba(52, 211, 153, 0.08)',
       borderColor: 'rgba(52, 211, 153, 0.15)',
     },
     {
       icon: <Shield size={22} />,
-      title: 'Query Security Firewall',
-      description: 'Every generated query is parsed through a security validator that blocks INSERT, UPDATE, DELETE, and DROP statements.',
+      title: '100% Read-Only Safety',
+      description: 'Your data integrity is protected. Quexy is strictly read-only and automatically blocks any delete, insert, or write modifications to your database.',
       color: '#60A5FA',
       bgColor: 'rgba(96, 165, 250, 0.08)',
       borderColor: 'rgba(96, 165, 250, 0.15)',
     },
     {
       icon: <Zap size={22} />,
-      title: 'Execution Plan Advisor',
-      description: 'Automatically runs EXPLAIN on queries, detects full table scans, and suggests CREATE INDEX optimizations.',
+      title: 'Instant Database Reports',
+      description: 'Bypass slow loading times. The query engine optimizes database lookups behind the scenes to serve reports and lists without bottlenecks.',
       color: '#FBBF24',
       bgColor: 'rgba(251, 191, 36, 0.08)',
       borderColor: 'rgba(251, 191, 36, 0.15)',
     },
     {
       icon: <Database size={22} />,
-      title: 'Multi-Database Hub',
-      description: 'Connect PostgreSQL, MySQL, SQLite, CSV, and Excel sources. Switch between saved profiles with a single click.',
+      title: 'Centralized Data Hub',
+      description: 'Link PostgreSQL, MySQL, Excel sheets, or CSV files. Access and switch between multiple organizational databases with a single click.',
       color: '#F472B6',
       bgColor: 'rgba(244, 114, 182, 0.08)',
       borderColor: 'rgba(244, 114, 182, 0.15)',
     },
     {
       icon: <Layers size={22} />,
-      title: 'Adaptive Dashboards',
-      description: 'AI dynamically composes KPI cards, charts, data tables, and insights based on the nature of your question.',
+      title: 'Interactive Visual Dashboards',
+      description: 'Quexy instantly compiles raw search findings into key metrics, graphs, charts, and bullet-point summaries customized to each question.',
       color: '#FB923C',
       bgColor: 'rgba(251, 146, 60, 0.08)',
       borderColor: 'rgba(251, 146, 60, 0.15)',
     },
   ];
 
-  const techStack = [
-    { label: 'FastAPI', sub: 'Backend' },
-    { label: 'Next.js 15', sub: 'Frontend' },
-    { label: 'PostgreSQL', sub: 'System DB' },
-    { label: 'Gemini / Groq', sub: 'LLM Providers' },
-    { label: 'sqlglot', sub: 'AST Engine' },
-    { label: 'Recharts', sub: 'Visualization' },
+  const trustFactors = [
+    { label: 'Security First', sub: 'Read-only access limits' },
+    { label: 'Fully Private', sub: 'We do not store your databases' },
+    { label: 'Standard Protocols', sub: 'SSL-encrypted endpoints' },
+    { label: 'No-Code Simplicity', sub: 'Built for business users' },
   ];
 
   return (
@@ -164,7 +161,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
           marginBottom: '28px', position: 'relative',
         }}>
           <Sparkles size={12} />
-          AI-Powered Business Intelligence
+          Intuitive Data Analytics & Visual Reports
         </div>
 
         {/* Headline */}
@@ -184,7 +181,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
           }}>
-            Get answers.
+            Get instant reports.
           </span>
         </h1>
 
@@ -197,9 +194,9 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
           margin: '0 auto 40px',
           position: 'relative',
         }}>
-          Connect any database. Type a question in plain English. Quexy generates SQL,
-          validates it through a security firewall, and returns interactive dashboards
-          with KPIs, charts, and AI-driven insights.
+          Unlock instant insights from your data without writing code. Simply connect your database 
+          or upload a spreadsheet, ask questions in plain English, and instantly view clear 
+          visual charts, trends, and executive summaries.
         </p>
 
         {/* CTA Buttons */}
@@ -217,29 +214,6 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
             Start Analyzing
             <ArrowRight size={16} />
           </button>
-          <a
-            href="https://github.com/DevFultariya/Quexy"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: '14px 28px',
-              fontSize: '15px',
-              borderRadius: '12px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-              display: 'flex', alignItems: 'center', gap: '8px',
-              textDecoration: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-          >
-            <Terminal size={16} />
-            View on GitHub
-          </a>
         </div>
 
         {/* Terminal Preview Mock */}
@@ -264,16 +238,15 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#EF4444' }} />
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#F59E0B' }} />
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22C55E' }} />
-            <span style={{ marginLeft: '12px', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 500 }}>Quexy Dashboard</span>
+            <span style={{ marginLeft: '12px', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 500 }}>Quexy Reports</span>
           </div>
           {/* Content */}
           <div style={{ padding: '24px 28px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '10px', fontFamily: 'monospace' }}>
-              <span style={{ color: '#A78BFA' }}>user</span>
-              <span style={{ color: 'var(--text-tertiary)' }}> › </span>
+            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '10px', fontFamily: 'var(--font-family)', textAlign: 'left' }}>
+              <span>Ask a question: </span>
             </div>
             <p style={{
-              fontSize: '15px', color: 'var(--text-primary)', fontWeight: 500, marginBottom: '20px', lineHeight: 1.5,
+              fontSize: '15px', color: 'var(--text-primary)', fontWeight: 500, marginBottom: '20px', lineHeight: 1.5, textAlign: 'left'
             }}>
               &ldquo;Show me monthly revenue trends for 2024 broken down by product category&rdquo;
             </p>
@@ -290,6 +263,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
                   borderRadius: '10px',
                   background: 'rgba(255, 255, 255, 0.02)',
                   border: '1px solid rgba(255, 255, 255, 0.04)',
+                  textAlign: 'left'
                 }}>
                   <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>{kpi.label}</div>
                   <div style={{ fontSize: '20px', fontWeight: 700, color: kpi.color }}>{kpi.value}</div>
@@ -319,10 +293,10 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
             fontSize: '32px', fontWeight: 700, letterSpacing: '-0.8px',
             marginBottom: '12px',
           }}>
-            Engineered for Depth
+            Designed for Deep Insights
           </h2>
           <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto' }}>
-            Not just an API wrapper. Every layer is purpose-built with compiler-level intelligence.
+            A secure analytics platform built to extract maximum value from your metrics, without the technical complexity.
           </p>
         </div>
 
@@ -366,7 +340,7 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
         </div>
       </section>
 
-      {/* ===== TECH STACK BAR ===== */}
+      {/* ===== TRUST FACTORS BAR ===== */}
       <section style={{
         borderTop: '1px solid rgba(255, 255, 255, 0.04)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
@@ -376,10 +350,10 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
           maxWidth: '900px', margin: '0 auto',
           display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px',
         }}>
-          {techStack.map((tech) => (
-            <div key={tech.label} style={{ textAlign: 'center', minWidth: '100px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{tech.label}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{tech.sub}</div>
+          {trustFactors.map((factor) => (
+            <div key={factor.label} style={{ textAlign: 'center', minWidth: '150px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{factor.label}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{factor.sub}</div>
             </div>
           ))}
         </div>
@@ -401,10 +375,10 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
           fontSize: '28px', fontWeight: 700, marginBottom: '14px',
           letterSpacing: '-0.5px', position: 'relative',
         }}>
-          Ready to query?
+          Ready to ask your first question?
         </h2>
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '30px', position: 'relative' }}>
-          Connect your database and start asking questions in seconds.
+          Connect your database securely and load insights in seconds.
         </p>
         <button
           onClick={onGetStarted}
@@ -424,20 +398,10 @@ export default function LandingPage({ onGetStarted, onSignIn }: Props) {
       <footer style={{
         borderTop: '1px solid rgba(255, 255, 255, 0.04)',
         padding: '24px 40px',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
         fontSize: '12px', color: 'var(--text-tertiary)',
       }}>
-        <span>© 2025 Quexy. Built by Dev Fultariya.</span>
-        <a
-          href="https://github.com/DevFultariya/Quexy"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: 'var(--text-tertiary)', textDecoration: 'none', fontWeight: 500 }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
-        >
-          GitHub Repository
-        </a>
+        <span>© 2026 Quexy. Built for business intelligence. All rights reserved.</span>
       </footer>
     </div>
   );

@@ -129,7 +129,17 @@ class QueryValidator:
         
         # Check 5: Parse with sqlglot and validate AST
         try:
-            parsed = sqlglot.parse(cleaned_sql, read=dialect if dialect != "postgres" else "postgres")
+            # Multi-dialect parsing hierarchy:
+            # 1. Try parsing using target connection dialect (handles MySQL backticks)
+            try:
+                parsed = sqlglot.parse(cleaned_sql, read=dialect if dialect != "postgres" else "postgres")
+            except Exception:
+                try:
+                    # 2. Try parsing using postgres reader (handles ANSI double quotes)
+                    parsed = sqlglot.parse(cleaned_sql, read="postgres")
+                except Exception:
+                    # 3. Fallback to default parsing
+                    parsed = sqlglot.parse(cleaned_sql)
             
             if not parsed:
                 return ValidationResult(
@@ -157,15 +167,13 @@ class QueryValidator:
                     for blocked_type in self.BLOCKED_STATEMENT_TYPES:
                         if isinstance(node, blocked_type):
                             return ValidationResult(
-                                is_valid=False,
-                                query=sql,
-                                reason=f"Blocked operation detected: {type(node).__name__}",
-                            )
+                                  is_valid=False,
+                                  query=sql,
+                                  reason=f"Blocked operation detected: {type(node).__name__}",
+                              )
         
-        except sqlglot.errors.ErrorLevel:
-            pass  # Some queries might not parse perfectly but are still valid
         except Exception:
-            pass  # If sqlglot can't parse it, fall through to keyword checks
+            pass  # Some queries might not parse perfectly but are still valid
         
         # Check 6: Add row limit if not present
         sanitized = self._enforce_row_limit(cleaned_sql, dialect)

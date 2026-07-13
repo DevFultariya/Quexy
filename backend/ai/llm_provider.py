@@ -32,6 +32,7 @@ class LLMProvider:
         self._fallback: BaseChatModel | None = None
         self._primary_name = "Gemini 2.5 Flash"
         self._fallback_name = "Groq Llama 3.3 70B"
+        self._primary_rate_limited_until = 0.0
         self._initialized = False
     
     def _initialize(self):
@@ -90,8 +91,18 @@ class LLMProvider:
             HumanMessage(content=user_prompt),
         ]
         
+        # Determine whether to attempt the primary model (circuit breaker check)
+        use_primary = self._primary is not None
+        if use_primary and time.time() < self._primary_rate_limited_until:
+            cooldown_remaining = int(self._primary_rate_limited_until - time.time())
+            logger.info(
+                f"Skipping {self._primary_name} (Under rate-limit cooldown for another {cooldown_remaining}s). "
+                f"Directly querying {self._fallback_name}..."
+            )
+            use_primary = False
+        
         # Try primary first
-        if self._primary:
+        if use_primary:
             try:
                 response = self._primary.invoke(messages)
                 logger.info(f"Response from {self._primary_name}")
@@ -99,7 +110,12 @@ class LLMProvider:
             except Exception as e:
                 error_str = str(e).lower()
                 if "429" in error_str or "resource_exhausted" in error_str or "rate" in error_str:
-                    logger.warning(f"{self._primary_name} rate limited, falling back to {self._fallback_name}")
+                    # Activate 2-minute cooldown
+                    self._primary_rate_limited_until = time.time() + 120
+                    logger.warning(
+                        f"{self._primary_name} rate limited. Activating 120s cooldown. "
+                        f"Falling back to {self._fallback_name}"
+                    )
                 else:
                     logger.warning(f"{self._primary_name} error: {e}, trying fallback")
         

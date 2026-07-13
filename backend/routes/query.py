@@ -3,6 +3,7 @@ Quexy — Query API Routes
 Endpoints for submitting queries, listing history, and hydrating past analyses.
 Integrates user session checks to isolate query outcomes per connection.
 """
+import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
@@ -11,6 +12,8 @@ from ai.pipeline import ai_pipeline
 from connectors.manager import connection_manager
 from routes.auth import get_current_user
 from database import get_user_history, get_query_log_by_id, get_datasource_by_id
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -146,11 +149,17 @@ async def get_query_response(
             )
         
     try:
-        # Re-execute the query directly against the active connection
-        data = connection_manager.execute_query(log["sql_query"])
+        # Run SQL through ASTCorrector to ensure dialect-compatibility and schema alignment
+        logger.info(f"Hydration request for query ID: {query_id}. Original SQL: {log['sql_query']}")
+        from schema.ast_corrector import ASTCorrector
+        corrector = ASTCorrector(connection_manager.schema_cache)
+        sql, _ = corrector.correct_query(log["sql_query"], connection_manager.get_dialect())
+        logger.info(f"Hydration. Cleaned and corrected SQL: {sql}")
         
-        # Re-classify intent & recompose output layouts
-        intent = await ai_pipeline._classify_intent(log["question"])
+        data = connection_manager.execute_query(sql)
+        
+        # Re-classify intent & recompose output layouts (programmatic, runs instantly)
+        intent = ai_pipeline._classify_intent_programmatic(log["question"])
         response_data = await ai_pipeline._compose_response(log["question"], data, intent)
         
         return {
@@ -170,7 +179,8 @@ async def get_query_response(
             }
         }
     except Exception as e:
+        normalized = ai_pipeline.normalize_error(str(e))
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to hydrate query history item: {str(e)}"
+            detail=normalized
         )

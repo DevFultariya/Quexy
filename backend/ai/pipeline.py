@@ -41,6 +41,65 @@ class AIPipeline:
     def __init__(self):
         pass
     
+    def normalize_error(self, error_str: str) -> str:
+        """Translate technical stack trace errors into polite, client-focused business messages."""
+        if not error_str:
+            return "An unexpected error occurred while compiling your report. Please try rephrasing."
+            
+        error_lower = error_str.lower()
+        
+        # 1. LLM cannot answer (insufficient data / mismatch schema)
+        if "cannot_answer:" in error_lower:
+            reason = error_str.split(":", 1)[1].strip() if ":" in error_str else ""
+            if reason:
+                return f"We couldn't match this question with your database columns. (Details: {reason})"
+            return "We couldn't match your question with the tables or fields available in this database."
+
+        # 2. Blocked write operations / security checks
+        if "blocked operation" in error_lower or "security check failed" in error_lower or "only select queries" in error_lower:
+            return (
+                "Security Notice: Quexy is configured for read-only access to protect your database. "
+                "Modification commands (like writing, editing, or deleting rows) are blocked."
+            )
+            
+        # 3. Schema Mismatch / Table or Column typos
+        if "no such table" in error_lower or "no such column" in error_lower or "doesn't exist" in error_lower or "unknown column" in error_lower:
+            return (
+                "We couldn't locate some of the data fields referenced in your question. "
+                "Please verify that you are asking about tables or columns listed in the sidebar."
+            )
+            
+        # 4. Connection drop / database timeout
+        if "connection" in error_lower or "operationalerror" in error_lower or "timeout" in error_lower or "refused" in error_lower:
+            return (
+                "Database Connection Issue: We lost contact with your database server. "
+                "Please check your database server availability or connection parameters in the sidebar."
+            )
+            
+        # 5. Rate limits / API quota
+        if "rate limit" in error_lower or "429" in error_lower or "quota" in error_lower or "exhausted" in error_lower:
+            return (
+                "Analytics Service Busy: The AI model is currently handling a high volume of requests. "
+                "Please wait a few seconds and try submitting your question again."
+            )
+            
+        # 6. SQL parsing failures
+        if "failed to parse" in error_lower or "parseerror" in error_lower or "unexpected token" in error_lower or "syntax error" in error_lower:
+            return (
+                "We had trouble compiling the database search statement for this question. "
+                "Try rephrasing your question in a simpler or more direct way."
+            )
+
+        # 7. Multiple statements blocked
+        if "multiple sql statements" in error_lower:
+            return "For safety, Quexy only runs one analytics query at a time. Please ask a single question."
+            
+        # Fallback
+        return (
+            "We couldn't process this request. Try phrasing your question differently, "
+            "or verify that the connected database contains the necessary data."
+        )
+
     async def process_question(self, question: str, user_id: Optional[str] = None) -> QueryResponse:
         """
         Process a natural language question and return a complete response.
@@ -76,8 +135,8 @@ class AIPipeline:
                     timestamp=datetime.now().isoformat(),
                 )
             
-            # Step 1: Classify intent
-            intent = await self._classify_intent(question)
+            # Step 1: Classify intent (programmatic, runs instantly)
+            intent = self._classify_intent_programmatic(question)
             logger.info(f"Intent classified: {intent}")
             
             # Step 2: Generate SQL
@@ -88,12 +147,13 @@ class AIPipeline:
             
             # Check if AI couldn't answer
             if sql.startswith("CANNOT_ANSWER"):
+                reason = sql.replace("CANNOT_ANSWER:", "").strip()
                 return QueryResponse(
                     query_id=query_id,
                     question=question,
-                    summary=sql.replace("CANNOT_ANSWER:", "").strip(),
+                    summary=reason,
                     success=False,
-                    error="Unable to generate a query for this question with the available data.",
+                    error=self.normalize_error(f"cannot_answer: {reason}"),
                     timestamp=datetime.now().isoformat(),
                 )
             
@@ -111,7 +171,7 @@ class AIPipeline:
                     query_id=query_id,
                     question=question,
                     success=False,
-                    error=f"Query security check failed: {validation.reason}",
+                    error=self.normalize_error(f"Query security check failed: {validation.reason}"),
                     timestamp=datetime.now().isoformat(),
                 )
             
@@ -124,7 +184,7 @@ class AIPipeline:
                     query_id=query_id,
                     question=question,
                     success=False,
-                    error="Failed to execute query after multiple attempts.",
+                    error=self.normalize_error("Failed to execute query after multiple attempts."),
                     timestamp=datetime.now().isoformat(),
                 )
             
@@ -134,7 +194,7 @@ class AIPipeline:
                 original_sql=sql,
                 corrected_sql=executed_sql,
                 ast_corrected=was_corrected
-            )
+              )
             
             # Step 5: Compose response
             response_data = await self._compose_response(question, data, intent)
@@ -176,24 +236,24 @@ class AIPipeline:
                 query_id=query_id,
                 question=question,
                 success=False,
-                error=str(e),
+                error=self.normalize_error(str(e)),
                 timestamp=datetime.now().isoformat(),
-                execution_time_ms=execution_time,
             )
     
-    async def _classify_intent(self, question: str) -> str:
-        """Classify the user's analytical intent."""
-        try:
-            prompt = INTENT_CLASSIFICATION_PROMPT.format(question=question)
-            response = llm_provider.invoke(
-                system_prompt="You are an intent classifier. Return ONLY the intent category.",
-                user_prompt=prompt,
-            )
-            intent = response.strip().upper()
-            valid_intents = ["METRIC", "TREND", "COMPARISON", "RANKING", "EXPLORATION", "DETAIL", "DISTRIBUTION"]
-            return intent if intent in valid_intents else "EXPLORATION"
-        except Exception:
-            return "EXPLORATION"
+    def _classify_intent_programmatic(self, question: str) -> str:
+        """Classify the user's analytical intent programmatically to avoid slow LLM calls."""
+        q_lower = question.lower()
+        if any(w in q_lower for w in ["trend", "month", "year", "date", "day", "weekly", "daily", "over time", "timeline"]):
+            return "TREND"
+        if any(w in q_lower for w in ["distribution", "share", "percent", "ratio", "breakdown"]):
+            return "DISTRIBUTION"
+        if any(w in q_lower for w in ["top", "best", "worst", "ranking", "most", "highest", "lowest", "max", "min"]):
+            return "RANKING"
+        if any(w in q_lower for w in ["compare", "versus", "vs", "difference"]):
+            return "COMPARISON"
+        if any(w in q_lower for w in ["how many", "count", "total", "sum", "average", "avg"]):
+            return "METRIC"
+        return "EXPLORATION"
     
     async def _generate_sql(self, question: str, schema_context: str, dialect: str) -> str:
         """Generate SQL from natural language using the LLM."""
