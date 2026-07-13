@@ -155,6 +155,34 @@ export default function ConnectDataSource({ onConnected, onClose }: Props) {
           background: 'var(--gradient-ai)', borderRadius: '20px 20px 0 0',
         }} />
 
+        {/* Full Card Loading Overlay */}
+        {isLoading && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(10, 10, 15, 0.75)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            gap: '16px',
+            animation: 'fadeIn 0.2s ease-out',
+          }}>
+            <Loader2 className="animate-spin" size={32} style={{ color: 'var(--accent-secondary)' }} />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {activeTab === 'upload' ? 'Uploading & Ingesting Dataset...' : 'Connecting to Database...'}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', padding: '0 20px' }}>
+                Establishing secure socket connection and profiling schema caches
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Close Button */}
         {onClose && (
           <button

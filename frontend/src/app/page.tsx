@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import QueryInterface from '@/components/QueryInterface';
 import AdaptiveResponse from '@/components/AdaptiveResponse';
 import LoadingState from '@/components/LoadingState';
+import InitialLoader from '@/components/InitialLoader';
 import AuthModal from '@/components/AuthModal';
 import LandingPage from '@/components/LandingPage';
 import OnboardingWelcome from '@/components/OnboardingWelcome';
@@ -143,13 +144,9 @@ export default function Home() {
     }
   };
 
-  // --- Show Loading spinner while verifying auth token ---
+  // --- Show splash screen while verifying auth token on refresh ---
   if (!authChecked) {
-    return (
-      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-void)', alignItems: 'center', justifyContent: 'center' }}>
-        <LoadingState />
-      </div>
-    );
+    return <InitialLoader />;
   }
 
   // --- Show Landing Page + optional Auth overlay when not logged in ---
