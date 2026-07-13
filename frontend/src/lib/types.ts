@@ -94,7 +94,7 @@ export interface QueryHistoryItem {
 export interface TableInfo {
   name: string;
   columns: number;
-  rows: number;
+  rows: number | string;
   column_names: string[];
 }
 
