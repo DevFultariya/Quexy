@@ -421,7 +421,9 @@ export default function Sidebar({
                     )}
                   </>
                 ) : (
-                  <Table size={14} style={{ color: 'rgba(255, 255, 255, 0.2)' }} title={table.name} />
+                  <span title={table.name} style={{ display: 'inline-flex' }}>
+                    <Table size={14} style={{ color: 'rgba(255, 255, 255, 0.2)' }} />
+                  </span>
                 )}
               </div>
             ))}
